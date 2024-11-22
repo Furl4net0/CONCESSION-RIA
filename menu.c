@@ -44,7 +44,7 @@ typedef struct {
 Cliente listaClientes[MAX_CLIENTES];
 int quantidadeClientes = 0;
 
-// Funcao para validar CPF
+// Função para validar CPF
 int validarCPF(const char* cpf) {
     if (strlen(cpf) != 11) return 0;
     for (int i = 0; i < 11; i++) {
@@ -52,7 +52,6 @@ int validarCPF(const char* cpf) {
     }
     return 1;
 }
-
 
 // Função para carregar clientes do arquivo
 void carregarClientes() {
@@ -110,10 +109,9 @@ void cadastrarCliente() {
 
     Cliente novoCliente;
 
-
     corTexto(AZUL);
-    printf("╔════════════════════════════════╗\n");
-    printf("║ ╔==  Cadastro de Cliente   ==╗ ║\n");
+    printf("+--------------------------------+\n");
+    printf("¦ +==  Cadastro de Cliente   ==+ ¦\n");
     printf(" >>> Digite o CPF (11 digitos):\n");
     scanf("%s", novoCliente.cpf);
     if (!validarCPF(novoCliente.cpf)) {
@@ -139,9 +137,8 @@ void cadastrarCliente() {
 
     if (novoCliente.rendaMensal < 3000.0 || novoCliente.temDivida == 'S' ||  novoCliente.temDivida == 's'|| novoCliente.temFinanciamento == 'S'|| novoCliente.temFinanciamento == 's') {
         printf("Cliente nao e elegivel para\n a compra de um carro.\n");
-        printf("╚════════════════════════════════╝\n");
+        printf("+--------------------------------+\n");
         return;
-
     }
 
     novoCliente.ativo = 1;
@@ -152,20 +149,31 @@ void cadastrarCliente() {
     listaClientes[quantidadeClientes++] = novoCliente;
     salvarClientes();
     printf("  Cliente cadastrado com sucesso!\n");
-    printf("╚════════════════════════════════╝\n");
+    printf("+--------------------------------+\n");
     corTexto(RESET);
+}
+
+// Função para remover um cliente da lista
+void removerCliente(int indice) {
+    // Deslocar os clientes após o cliente removido
+    for (int i = indice; i < quantidadeClientes - 1; i++) {
+        listaClientes[i] = listaClientes[i + 1];
+    }
+
+    // Reduzir a quantidade de clientes
+    quantidadeClientes--;
 }
 
 // Listar clientes e desativar cliente
 void listarClientes() {
-     corTexto(AZUL);
+    corTexto(AZUL);
     if (quantidadeClientes == 0) {
         printf(VERDE"\nNenhum cliente cadastrado.\n"RESET);
         return;
     }
 
-    printf("\n╔════════════════════════════════╗\n");
-    printf("║  ╔==== Lista de Clientes ===╗  ║\n");
+    printf("\n+--------------------------------+\n");
+    printf("¦  +==== Lista de Clientes ===+  ¦\n");
 
     for (int i = 0; i < quantidadeClientes; i++) {
         Cliente c = listaClientes[i];
@@ -174,25 +182,27 @@ void listarClientes() {
         printf("   Nome: %s\n", c.nome);
         printf("   Ativo: %s\n", c.ativo ? "Sim" : "Nao");
         printf("   Carro Comprado: %s\t\t", c.carroComprado.modelo);
-        printf("\n╚════════════════════════════════╝\n");
+        printf("\n+--------------------------------+\n");
         corTexto(RESET);
     }
 
     // Opcao para desativar cliente
-    printf("Deseja desativar algum cliente? (S/N): ");
+    printf("Deseja remover algum cliente? (S/N): ");
     char escolha;
     scanf(" %c", &escolha);
     if (escolha == 'S' || escolha == 's') {
         int indice;
-        printf("Digite o numero do cliente a ser desativado: ");
+        printf("Digite o numero do cliente a ser removido: ");
         scanf("%d", &indice);
         if (indice < 1 || indice > quantidadeClientes) {
             printf("Numero invalido.\n");
             return;
         }
-        listaClientes[indice - 1].ativo = 0;
+
+        // Remover o cliente da lista
+        removerCliente(indice - 1);
         salvarClientes();
-        printf("Cliente desativado com sucesso!\n");
+        printf("Cliente removido com sucesso!\n");
     }
 }
 
@@ -203,8 +213,8 @@ void comprarCarro() {
         printf("\nNenhum cliente cadastrado.\n");
         return;
     }
-    printf("\n╔════════════════════════════════╗\n");
-    printf("║  ===== Compra de Carro ======= ║\n");
+    printf("\n+--------------------------------+\n");
+    printf("¦  ===== Compra de Carro ======= ¦\n");
     printf("\n >>> Digite o CPF do cliente: ");
     char cpfBusca[CPF_TAMANHO];
     scanf("%s", cpfBusca);
@@ -231,62 +241,42 @@ void comprarCarro() {
     printf("\nCarros disponiveis:\n");
     Carro carros[MAX_CARROS] = {
         {1, "Sedan", 40000.0},
-        {2, "SUV", 60000.0},
-        {3, "Hatch", 30000.0},
-        {4, "Pickup", 80000.0},
-        {5, "Conversivel", 120000.0},
+        {2, "Hatch", 30000.0},
+        {3, "SUV", 50000.0},
+        {4, "Crossover", 45000.0},
+        {5, "Picape", 60000.0}
     };
 
     for (int i = 0; i < MAX_CARROS; i++) {
         printf("%d. %s - R$ %.2f\n", carros[i].id, carros[i].modelo, carros[i].preco);
     }
 
-    printf(" Escolha o numero do carro que o cliente deseja comprar: ");
+    printf("\n >>> Digite o numero do carro desejado: ");
     int escolhaCarro;
     scanf("%d", &escolhaCarro);
 
     if (escolhaCarro < 1 || escolhaCarro > MAX_CARROS) {
-        printf("\nOpcao invalida.\n");
+        printf("Carro invalido.\n");
         return;
     }
 
-    Carro carroEscolhido = carros[escolhaCarro - 1];
-    if (carroEscolhido.preco > cliente->rendaMensal * 12) {
-        printf("Cliente nao possui renda suficiente para comprar este carro.\n");
-        return;
-    }
-
-    cliente->carroComprado = carroEscolhido;
+    cliente->carroComprado = carros[escolhaCarro - 1];
+    printf("Carro %s comprado com sucesso!\n", cliente->carroComprado.modelo);
     salvarClientes();
-    corTexto(RESET);
-    corTexto(ROSA);
-printf("\n╔════════════════════════════════════════════════════════════════════════════════╗\n");
-    printf("║ Compra realizada com sucesso! O cliente adquiriu o carro %s por R$%.2f    ║\n",
-        carroEscolhido.modelo, carroEscolhido.preco);
-    printf("╚════════════════════════════════════════════════════════════════════════════════╝\n");
     corTexto(RESET);
 }
 
 // Menu principal
-
-void menuPrincipal() {
-    carregarClientes();
+void menu() {
     int opcao;
     do {
-        corTexto(VERMELHO);
-        printf("\n\n");
-        printf("╔══════════════════════════════╗\n");
-        printf("║ ╔===== Menu Principal =====╗ ║\n");
-        printf("║ |                          | ║\n");
-        printf("║ |    1. Cadastro           | ║\n");
-        printf("║ |    2. Listar Clientes    | ║\n");
-        printf("║ |    3. Comprar um Carro   | ║\n");
-        printf("║ |    4. Sair               | ║\n");
-        printf("║ ╚                          ╝ ║\n");
-        printf("╚═════╗                   ╔════╝\n");
-        printf("\t\tDigite sua opcao:");
+        printf("\n==== MENU ====\n");
+        printf("1. Cadastrar Cliente\n");
+        printf("2. Listar Clientes\n");
+        printf("3. Comprar Carro\n");
+        printf("4. Sair\n");
+        printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
-        corTexto(RESET);
 
         switch (opcao) {
             case 1:
@@ -299,16 +289,16 @@ void menuPrincipal() {
                 comprarCarro();
                 break;
             case 4:
-                printf(ROSA"Saindo...\n"RESET);
-                salvarClientes();
+                printf("Saindo...\n");
                 break;
             default:
-                printf(ROSA"Opcao invalida!\n"RESET);
+                printf("Opcao invalida!\n");
         }
     } while (opcao != 4);
 }
 
 int main() {
-    menuPrincipal();
+    carregarClientes();
+    menu();
     return 0;
 }
