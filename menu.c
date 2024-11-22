@@ -85,14 +85,15 @@ void salvarClientes() {
 
     for (int i = 0; i < quantidadeClientes; i++) {
         Cliente c = listaClientes[i];
-        fprintf(arquivo, 
-                "Nome: %s | CPF: %s | Renda Bruta: %.2f | Tem_Financiamento: %s | Tem_Divida: %s | Carros comprados: %s (%.2f)\n", 
-                c.nome, 
+        fprintf(arquivo, "%s %s %d %.2f %c %c %d %s %.2f\n", 
                 c.cpf, 
+                c.nome, 
+                c.ativo, 
                 c.rendaMensal,
-                (c.temFinanciamento == 'S') ? "Sim" : "Nao", 
-                (c.temDivida == 'S') ? "Sim" : "Nao",
-                c.carroComprado.id > 0 ? c.carroComprado.modelo : "Nenhum",
+                c.temDivida, 
+                c.temFinanciamento,
+                c.carroComprado.id,
+                c.carroComprado.modelo,
                 c.carroComprado.preco);
     }
 
@@ -251,26 +252,28 @@ void comprarCarro() {
         printf("%d. %s - R$ %.2f\n", carros[i].id, carros[i].modelo, carros[i].preco);
     }
 
-    printf("\n >>> Digite o numero do carro desejado: ");
-    int escolhaCarro;
-    scanf("%d", &escolhaCarro);
+    printf("\nDigite o ID do carro que deseja comprar: ");
+    int idCarro;
+    scanf("%d", &idCarro);
 
-    if (escolhaCarro < 1 || escolhaCarro > MAX_CARROS) {
+    if (idCarro < 1 || idCarro > MAX_CARROS) {
         printf("Carro invalido.\n");
         return;
     }
 
-    cliente->carroComprado = carros[escolhaCarro - 1];
-    printf("Carro %s comprado com sucesso!\n", cliente->carroComprado.modelo);
+    printf("Carro comprado com sucesso!\n");
+
+    // Atualizando o cliente com o carro comprado
+    cliente->carroComprado = carros[idCarro - 1];
     salvarClientes();
-    corTexto(RESET);
 }
 
-// Menu principal
-void menu() {
+int main() {
+    carregarClientes();
+
     int opcao;
     do {
-        printf("\n==== MENU ====\n");
+        printf("\nMenu:\n");
         printf("1. Cadastrar Cliente\n");
         printf("2. Listar Clientes\n");
         printf("3. Comprar Carro\n");
@@ -292,13 +295,9 @@ void menu() {
                 printf("Saindo...\n");
                 break;
             default:
-                printf("Opcao invalida!\n");
+                printf("Opcao invalida.\n");
         }
     } while (opcao != 4);
-}
 
-int main() {
-    carregarClientes();
-    menu();
     return 0;
 }
