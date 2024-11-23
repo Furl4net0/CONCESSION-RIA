@@ -21,7 +21,6 @@ void corTexto(char *cor) {
 #define VERMELHO "\033[1;31m"
 #define VERMELHOCLARO "\033[0;31m"
 
-
 // Estrutura para Carro
 typedef struct {
     int id;
@@ -40,9 +39,10 @@ typedef struct {
     Carro carroComprado;    // Carro associado ao cliente
 } Cliente;
 
-// Lista de clientes
-Cliente listaClientes[MAX_CLIENTES];
+// Lista de clientes (agora com alocação dinâmica)
+Cliente* listaClientes = NULL;
 int quantidadeClientes = 0;
+int capacidadeClientes = 0;
 
 // Função para validar CPF
 int validarCPF(const char* cpf) {
@@ -85,15 +85,14 @@ void salvarClientes() {
 
     for (int i = 0; i < quantidadeClientes; i++) {
         Cliente c = listaClientes[i];
-        fprintf(arquivo, "%s %s %d %.2f %c %c %d %s %.2f\n", 
-                c.cpf, 
+        fprintf(arquivo, 
+                "Nome: %s | CPF: %s | Renda Bruta: %.2f | Tem_Financiamento: %s | Tem_Divida: %s | Carros comprados: %s (%.2f)\n", 
                 c.nome, 
-                c.ativo, 
+                c.cpf, 
                 c.rendaMensal,
-                c.temDivida, 
-                c.temFinanciamento,
-                c.carroComprado.id,
-                c.carroComprado.modelo,
+                (c.temFinanciamento == 'S') ? "Sim" : "Nao", 
+                (c.temDivida == 'S') ? "Sim" : "Nao",
+                c.carroComprado.id > 0 ? c.carroComprado.modelo : "Nenhum",
                 c.carroComprado.preco);
     }
 
@@ -103,9 +102,13 @@ void salvarClientes() {
 
 // Cadastro de cliente
 void cadastrarCliente() {
-    if (quantidadeClientes >= MAX_CLIENTES) {
-        printf("Erro: Capacidade maxima de clientes atingida.\n");
-        return;
+    if (quantidadeClientes >= capacidadeClientes) {
+        capacidadeClientes = (capacidadeClientes == 0) ? 10 : capacidadeClientes * 2;
+        listaClientes = (Cliente*)realloc(listaClientes, capacidadeClientes * sizeof(Cliente)); // Corrigido para Cliente*
+        if (listaClientes == NULL) {
+            printf("Erro ao alocar memória para clientes!\n");
+            return;
+        }
     }
 
     Cliente novoCliente;
@@ -136,7 +139,7 @@ void cadastrarCliente() {
     printf(" >>> Cliente possui financiamento? (S/N):\n");
     scanf(" %c", &novoCliente.temFinanciamento);
 
-    if (novoCliente.rendaMensal < 3000.0 || novoCliente.temDivida == 'S' ||  novoCliente.temDivida == 's'|| novoCliente.temFinanciamento == 'S'|| novoCliente.temFinanciamento == 's') {
+    if (novoCliente.rendaMensal < 3000.0 || novoCliente.temDivida == 'S' || novoCliente.temDivida == 's' || novoCliente.temFinanciamento == 'S' || novoCliente.temFinanciamento == 's') {
         printf("Cliente nao e elegivel para\n a compra de um carro.\n");
         printf("+--------------------------------+\n");
         return;
@@ -154,17 +157,6 @@ void cadastrarCliente() {
     corTexto(RESET);
 }
 
-// Função para remover um cliente da lista
-void removerCliente(int indice) {
-    // Deslocar os clientes após o cliente removido
-    for (int i = indice; i < quantidadeClientes - 1; i++) {
-        listaClientes[i] = listaClientes[i + 1];
-    }
-
-    // Reduzir a quantidade de clientes
-    quantidadeClientes--;
-}
-
 // Listar clientes e desativar cliente
 void listarClientes() {
     corTexto(AZUL);
@@ -175,7 +167,7 @@ void listarClientes() {
 
     printf("\n+--------------------------------+\n");
     printf("¦  +==== Lista de Clientes ===+  ¦\n");
-
+    
     for (int i = 0; i < quantidadeClientes; i++) {
         Cliente c = listaClientes[i];
         printf("   Cliente %d\n", i + 1);
@@ -188,22 +180,26 @@ void listarClientes() {
     }
 
     // Opcao para desativar cliente
-    printf("Deseja remover algum cliente? (S/N): ");
+    printf("Deseja desativar algum cliente? (S/N): ");
     char escolha;
     scanf(" %c", &escolha);
     if (escolha == 'S' || escolha == 's') {
         int indice;
-        printf("Digite o numero do cliente a ser removido: ");
+        printf("Digite o numero do cliente a ser desativado: ");
         scanf("%d", &indice);
         if (indice < 1 || indice > quantidadeClientes) {
             printf("Numero invalido.\n");
             return;
         }
+        
+        // Desativa o cliente
+        for (int i = indice - 1; i < quantidadeClientes - 1; i++) {
+            listaClientes[i] = listaClientes[i + 1];
+        }
+        quantidadeClientes--;  // Reduz a quantidade de clientes
 
-        // Remover o cliente da lista
-        removerCliente(indice - 1);
         salvarClientes();
-        printf("Cliente removido com sucesso!\n");
+        printf("Cliente desativado com sucesso!\n");
     }
 }
 
@@ -234,53 +230,75 @@ void comprarCarro() {
     }
 
     Cliente* cliente = &listaClientes[encontrado];
-    if (!cliente->ativo) {
-        printf("Cliente inativo. Nao e possivel realizar a compra.\n");
+    if (cliente->temDivida == 'S' || cliente->temFinanciamento == 'S') {
+        printf("Cliente nao pode comprar carro devido a dividas ou financiamento.\n");
         return;
     }
 
-    printf("\nCarros disponiveis:\n");
+    printf("Carros disponiveis para compra:\n");
     Carro carros[MAX_CARROS] = {
         {1, "Sedan", 40000.0},
-        {2, "Hatch", 30000.0},
-        {3, "SUV", 50000.0},
-        {4, "Crossover", 45000.0},
-        {5, "Picape", 60000.0}
+        {2, "SUV", 60000.0},
+        {3, "Hatch", 30000.0},
+        {4, "Pickup", 80000.0},
+        {5, "Conversivel", 120000.0},
     };
 
     for (int i = 0; i < MAX_CARROS; i++) {
         printf("%d. %s - R$ %.2f\n", carros[i].id, carros[i].modelo, carros[i].preco);
     }
 
-    printf("\nDigite o ID do carro que deseja comprar: ");
-    int idCarro;
-    scanf("%d", &idCarro);
+    printf("Escolha o numero do carro que deseja comprar: ");
+    int escolhaCarro;
+    scanf("%d", &escolhaCarro);
 
-    if (idCarro < 1 || idCarro > MAX_CARROS) {
-        printf("Carro invalido.\n");
+    if (escolhaCarro < 1 || escolhaCarro > MAX_CARROS) {
+        printf("Opcao invalida.\n");
         return;
     }
 
-    printf("Carro comprado com sucesso!\n");
+    Carro carroEscolhido = carros[escolhaCarro - 1];
+    if (carroEscolhido.preco > cliente->rendaMensal * 12) {
+        printf("Cliente nao possui renda suficiente para comprar este carro.\n");
+        return;
+    }
 
-    // Atualizando o cliente com o carro comprado
-    cliente->carroComprado = carros[idCarro - 1];
+    cliente->carroComprado = carroEscolhido;
     salvarClientes();
+    corTexto(RESET);
+    corTexto(ROSA);
+    printf("\n+--------------------------------------------------------------------------------+\n");
+    printf("¦ Compra realizada com sucesso! O cliente adquiriu o carro %s por R$%.2f    ¦\n", carroEscolhido.modelo, carroEscolhido.preco);
+    printf("+--------------------------------------------------------------------------------+\n");
+    corTexto(RESET);
 }
 
-int main() {
-    carregarClientes();
+// Menu principal
+void menuPrincipal() {
+    listaClientes = (Cliente*)malloc(10 * sizeof(Cliente)); // Alocando espaço inicial para 10 clientes
+    if (listaClientes == NULL) {
+        printf("Erro ao alocar memória!\n");
+        return;
+    }
 
+    carregarClientes();
     int opcao;
     do {
-        printf("\nMenu:\n");
-        printf("1. Cadastrar Cliente\n");
-        printf("2. Listar Clientes\n");
-        printf("3. Comprar Carro\n");
-        printf("4. Sair\n");
-        printf("Escolha uma opcao: ");
+        corTexto(VERMELHO);
+        printf("\n\n");
+        printf("+------------------------------+\n");
+        printf("¦ +===== Menu Principal =====+ ¦\n");
+        printf("¦ |                          | ¦\n");
+        printf("¦ |    1. Cadastro           | ¦\n");
+        printf("¦ |    2. Listar Clientes    | ¦\n");
+        printf("¦ |    3. Comprar um Carro   | ¦\n");
+        printf("¦ |    4. Sair               | ¦\n");
+        printf("¦ +                          + ¦\n");
+        printf("+-----+                   +----+\n");
+        printf("\t\tDigite sua opcao:");
         scanf("%d", &opcao);
-
+        corTexto(RESET);
+        
         switch (opcao) {
             case 1:
                 cadastrarCliente();
@@ -292,12 +310,18 @@ int main() {
                 comprarCarro();
                 break;
             case 4:
-                printf("Saindo...\n");
+                printf(ROSA"Saindo...\n"RESET);
+                salvarClientes();
                 break;
             default:
-                printf("Opcao invalida.\n");
+                printf(ROSA"Opcao invalida!\n"RESET);
         }
     } while (opcao != 4);
 
+    free(listaClientes); // Libera a memória alocada
+}
+
+int main() {
+    menuPrincipal();
     return 0;
 }
